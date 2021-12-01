@@ -3,6 +3,7 @@ package io.quarkus.devservices.oracle.deployment;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -15,6 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 import io.quarkus.datasource.common.runtime.DatabaseKind;
 import io.quarkus.datasource.deployment.spi.DevServicesDatasourceProvider;
 import io.quarkus.datasource.deployment.spi.DevServicesDatasourceProviderBuildItem;
+import io.quarkus.datasource.deployment.spi.DevServicesUseTestContainersSharedNetworkBuildItem;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.DevServicesSharedNetworkBuildItem;
 import io.quarkus.devservices.common.ConfigureUtil;
@@ -33,15 +35,16 @@ public class OracleDevServicesProcessor {
 
     @BuildStep
     DevServicesDatasourceProviderBuildItem setupOracle(
-            Optional<DevServicesSharedNetworkBuildItem> devServicesSharedNetworkBuildItem) {
+            Optional<DevServicesSharedNetworkBuildItem> devServicesSharedNetworkBuildItem,
+            List<DevServicesUseTestContainersSharedNetworkBuildItem> devServicesUseTestContainersSharedNetworkBuildItem) {
         return new DevServicesDatasourceProviderBuildItem(DatabaseKind.ORACLE, new DevServicesDatasourceProvider() {
             @Override
             public RunningDevServicesDatasource startDatabase(Optional<String> username, Optional<String> password,
                     Optional<String> datasourceName, Optional<String> imageName, Map<String, String> additionalProperties,
-                    OptionalInt fixedExposedPort, LaunchMode launchMode, Optional<Duration> startupTimeout,
-                    boolean useTestContainersSharedNetwork) {
+                    OptionalInt fixedExposedPort, LaunchMode launchMode, Optional<Duration> startupTimeout) {
                 QuarkusOracleServerContainer container = new QuarkusOracleServerContainer(imageName, fixedExposedPort,
-                        devServicesSharedNetworkBuildItem.isPresent(), useTestContainersSharedNetwork);
+                        devServicesSharedNetworkBuildItem.isPresent(),
+                        !devServicesUseTestContainersSharedNetworkBuildItem.isEmpty());
                 startupTimeout.ifPresent(container::withStartupTimeout);
                 container.withUsername(username.orElse(DEFAULT_DATABASE_USER))
                         .withPassword(password.orElse(DEFAULT_DATABASE_PASSWORD))
